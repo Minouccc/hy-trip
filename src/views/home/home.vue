@@ -4,18 +4,13 @@
     <div class="banner">
       <img src="@/assets/img/home/banner.webp" alt="" />
     </div>
-    <div class="location">
-      <div class="city">广州</div>
-      <div class="position">
-        <span class="text">我的位置</span>
-        <img src="@/assets/img/home/icon_location.png" alt="" />
-      </div>
-    </div>
+    <home-search-box></home-search-box>
   </div>
 </template>
 
 <script setup>
 import HomeNavBar from "./cpns/home-nav-bar.vue";
+import homeSearchBox from "./cpns/home-search-box.vue";
 </script>
 <style lang="less" scoped>
 .banner {
@@ -31,6 +26,7 @@ import HomeNavBar from "./cpns/home-nav-bar.vue";
 
   .city {
     flex: 1;
+    color: #333;
   }
   .position {
     width: 74px;
@@ -40,6 +36,7 @@ import HomeNavBar from "./cpns/home-nav-bar.vue";
       position: relative;
       top: 1px;
       font-size: 12px;
+      color: #444;
     }
     img {
       margin-left: 5px;

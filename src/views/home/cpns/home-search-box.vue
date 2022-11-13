@@ -1,13 +1,14 @@
 <template>
   <div class="search-box">
     <!-- 位置信息 -->
-    <div class="location">
+    <div class="location bottom-gray-line">
       <div class="city" @click="cityClick">{{ currentCity.cityName }}</div>
-      <div class="position">
-        <span class="text" @click="positionClick">我的位置</span>
+      <div class="position" @click="positionClick">
+        <span class="text">我的位置</span>
         <img src="@/assets/img/home/icon_location.png" alt="" />
       </div>
     </div>
+
     <!-- 日期范围 -->
     <div
       class="section date-range bottom-gray-line"
@@ -16,14 +17,14 @@
       <div class="start">
         <div class="date">
           <span class="tip">入住</span>
-          <span class="time">{{ startDate }}</span>
+          <span class="time">{{ startDateStr }}</span>
         </div>
         <div class="stay">共{{ stayCount }}晚</div>
       </div>
       <div class="end">
         <div class="date">
           <span class="tip">离店</span>
-          <span class="time">{{ endDate }}</span>
+          <span class="time">{{ endDateStr }}</span>
         </div>
       </div>
     </div>
@@ -32,6 +33,7 @@
       type="range"
       color="#ff9854"
       :round="false"
+      :show-confirm="false"
       @confirm="onConfirm"
     />
 
@@ -42,6 +44,7 @@
     </div>
     <!-- 关键字 -->
     <div class="section keyword bottom-gray-line">关键字/位置/民宿名</div>
+
     <!-- 热门建议 -->
     <div class="section hot-suggests">
       <template v-for="(item, index) in hotSuggests" :key="index">
@@ -56,71 +59,91 @@
         </div>
       </template>
     </div>
+
+    <!-- 搜索按钮 -->
+    <div class="section search-btn">
+      <div class="btn" @click="searchBtnClick">开始搜索</div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from "vue";
 import useCityStore from "@/stores/modules/city";
-import useHomeStore from "@/stores/modules/home";
 import { storeToRefs } from "pinia";
+import { ref } from "vue";
 import { useRouter } from "vue-router";
+import useHomeStore from "@/stores/modules/home";
 import { formatMonthDay, getDiffDays } from "@/utils/format_date";
+import useMainStore from "@/stores/modules/main";
+import { computed } from "@vue/reactivity";
 
 const router = useRouter();
 
-//定义Props
-// defineProps({
-//   hotSuggests: {
-//     type: Array,
-//     default: () => [],
-//   },
-// });
-
-//位置/城市
+// 位置/城市
 const cityClick = () => {
   router.push("/city");
 };
 const positionClick = () => {
-  navigator.geolocation.getCurrentPosition((res) => {
-    console.log("获取位置成功:", res);
-  }),
+  navigator.geolocation.getCurrentPosition(
+    (res) => {
+      console.log("获取位置成功:", res);
+    },
     (err) => {
       console.log("获取位置失败:", err);
-    };
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 5000,
+      maximumAge: 0,
+    }
+  );
 };
-
-//当前城市
 const cityStore = useCityStore();
 const { currentCity } = storeToRefs(cityStore);
 
-//日期处理
-const nowDate = new Date();
-const newDate = new Date();
-newDate.setDate(nowDate.getDate() + 1);
+// 日期范围的处理
+const mainStore = useMainStore();
+const { startDate, endDate } = storeToRefs(mainStore);
 
-const startDate = ref(formatMonthDay(nowDate));
-const endDate = ref(formatMonthDay(newDate));
-const stayCount = ref(getDiffDays(nowDate, newDate));
+const startDateStr = computed(() => formatMonthDay(startDate.value));
+const endDateStr = computed(() => formatMonthDay(endDate.value));
+const stayCount = ref(getDiffDays(startDate.value, endDate.value));
 
 const showCalendar = ref(false);
 const onConfirm = (value) => {
+  // 1.设置日期
   const selectStartDate = value[0];
   const selectEndDate = value[1];
-  startDate.value = formatMonthDay(selectStartDate);
-  endDate.value = formatMonthDay(selectEndDate);
+  mainStore.startDate = selectStartDate;
+  mainStore.endDate = selectEndDate;
   stayCount.value = getDiffDays(selectStartDate, selectEndDate);
+
+  // 2.隐藏日历
   showCalendar.value = false;
 };
 
-//热门建议
+// 热门建议
 const homeStore = useHomeStore();
 const { hotSuggests } = storeToRefs(homeStore);
+
+// 开始搜索
+const searchBtnClick = () => {
+  router.push({
+    path: "/search",
+    query: {
+      startDate: startDate.value,
+      endDate: endDate.value,
+      currentCity: currentCity.value.cityName,
+    },
+  });
+};
 </script>
+
 <style lang="less" scoped>
 .search-box {
   --van-calendar-popup-height: 100%;
 }
+
 .location {
   display: flex;
   align-items: center;
@@ -130,17 +153,21 @@ const { hotSuggests } = storeToRefs(homeStore);
   .city {
     flex: 1;
     color: #333;
+    font-size: 15px;
   }
+
   .position {
     width: 74px;
     display: flex;
     align-items: center;
+
     .text {
       position: relative;
-      top: 1px;
+      top: 2px;
+      color: #666;
       font-size: 12px;
-      color: #444;
     }
+
     img {
       margin-left: 5px;
       width: 18px;
@@ -148,6 +175,7 @@ const { hotSuggests } = storeToRefs(homeStore);
     }
   }
 }
+
 .section {
   display: flex;
   flex-wrap: wrap;
@@ -185,6 +213,7 @@ const { hotSuggests } = storeToRefs(homeStore);
     }
   }
 }
+
 .date-range {
   height: 44px;
   .stay {
@@ -203,6 +232,7 @@ const { hotSuggests } = storeToRefs(homeStore);
 
 .hot-suggests {
   margin: 10px 0;
+  height: auto;
 
   .item {
     padding: 4px 8px;
@@ -210,6 +240,21 @@ const { hotSuggests } = storeToRefs(homeStore);
     border-radius: 14px;
     font-size: 12px;
     line-height: 1;
+  }
+}
+
+.search-btn {
+  .btn {
+    width: 342px;
+    height: 38px;
+    max-height: 50px;
+    font-weight: 500;
+    font-size: 18px;
+    line-height: 38px;
+    text-align: center;
+    border-radius: 20px;
+    color: #fff;
+    background-image: var(--theme-linear-gradient);
   }
 }
 </style>
